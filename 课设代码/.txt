@@ -1,1 +1,354 @@
 
+#include <iostream>
+#include <string>
+#include <vector>
+#include <fstream>
+#include <sstream>
+
+using namespace std;
+
+string iKT[34] = {"KT","main","char","double","enum","float","int","long","short","signed","struct",
+                 "union","unsigned","void","for","do","while","break","continue","if",
+                 "else","goto","switch","case","default","return","auto","extern","register",
+                 "static","const","sizeof","typedef","volatile"};
+
+string iPT[35] = {"PT","<=",">=","==","=","!=","+=","-=","*=","/=",">","<","+","-","*","/","++","--",
+                 "{","}","(",")","[","]","->",".",",",";","&&","||","!","&","|","<<",">>"};
+
+vector <string> KT(iKT,iKT+34);
+
+vector <string> PT(iPT,iPT+35);
+
+vector <string> IT(1,"IT");
+
+vector <string> CT(1,"CT");
+
+vector <string> ST(1,"ST");
+
+vector <string> CCT(1,"CCT");
+
+string LETTER = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+string SYMBOL = "!+-*/{}()[].,;&|_";
+
+string NUMBER = "1234567890";
+
+typedef struct plotnode
+{
+    string name;
+    int num;
+    plotnode *next;
+    plotnode *prior;
+}plotnode;
+
+class plotlist
+{
+    public:
+        plotnode *head;
+        plotnode *last;
+        plotlist(){}
+        int isin(string name);
+        void clr();
+        void inilist(string name,int num);
+        void append(string name);
+        void add(string name,int num);
+};
+
+class scan
+{
+    public:
+        plotlist tL,tA,bKT,bPT;
+        int state_change(int state,char ch);
+        void state_token(int state_before,string token);
+        int inIT(string str);
+        int inCT(string str);
+        int inST(string str);
+        int inCCT(string str);
+        int inPT(string str);
+        int inKT(string str);
+};
+
+void plotlist::inilist(string name,int num)//初始化链表
+{
+    head = new plotnode;
+    head->name = name;
+    head->num = num;
+    last = head;
+    head->next = NULL;
+    head->prior = NULL;
+}
+
+void plotlist::add(string name,int num)//表尾添加数据
+{
+    plotnode *p;
+    p = last;
+    last = new plotnode;
+    last->name = name;
+    last->prior = p;
+    last->num = num;
+    last->next = NULL;
+    p->next = last;
+}
+
+void plotlist::clr()
+{
+    plotnode *p;
+    p = this->head;
+    for(int i=0;p!=NULL;p=p->next)
+        delete p;
+}
+
+int plotlist::isin(string str)//返回字符串在表中位置
+{
+    int num = 0;
+    plotnode *p;
+    p = this->head;
+    for(int i = 0;p!=NULL;p = p->next)
+    {
+        num = p->num;
+        if(str == p->name)
+            return num;
+    }
+    this->add(str,num+1);
+    return num;
+}
+
+int main()
+{
+    ifstream infile;
+    string str;
+    infile.open("test.txt");
+    stringstream buffer;
+    buffer << infile.rdbuf();
+    str = buffer.str();
+    cout << str << endl;
+
+    str = str + "\n#";
+    string token="";
+    int state = 1;
+    int state_before;
+    int i = 0,j = 0;
+    char ch;
+    plotnode *p;
+    scan s;
+    s.tL.inilist("tL",0);
+    s.tA.inilist("tA",0);
+    while((ch = str[i]) != '#')
+    {
+        state_before = state;
+        state = s.state_change(state,ch);
+        if(state != 1)
+            if(state)
+                {token = token + ch;i++;}
+            else
+            {
+                s.state_token(state_before,token);
+                state = 1;
+                token.clear();
+            }
+        else i++;
+        if(ch == '\n'&&j++%2==0)
+        {
+            p = s.tL.head;
+            for(int i=0;p!=NULL;p=p->next)
+            {
+                cout << "<" << p->name << " " << p->num << ">";
+            }
+            cout << endl;
+            s.tL.clr();
+            s.tL.inilist("tL",0);
+        }
+    }
+    p = s.tA.head;
+    for(int i=0;p!=NULL;p=p->next)
+    {
+        cout << "<" << p->name << " " << p->num << ">";
+    }
+    return 0;
+}
+
+int scan::state_change(int state,char ch)
+{
+    switch(state)
+    {
+        case 1:
+            if(LETTER.find(ch) != LETTER.npos) return 2;
+            else if(NUMBER.find(ch) != NUMBER.npos) return 3;
+            else if(ch == '\'') return 9;
+            else if(ch == '"') return 11;
+            else if(ch == '>') return 4;
+            else if(ch == '<') return 5;
+            else if(ch == '=') return 6;
+            else if(ch == ' '||ch == '\n'||ch == '\r') return 1;
+            else return 18;break;
+        case 2:
+            if(LETTER.find(ch) != LETTER.npos||NUMBER.find(ch) != NUMBER.npos) return 2;
+            else return 0;break;
+        case 3:
+            if(NUMBER.find(ch) != NUMBER.npos) return 3;
+            else if(ch == '.') return 8;
+            else if(ch == 'e') return 19;
+            else return 0;break;
+        case 4:
+            if(ch == '=') return 13;
+            else return 0;break;
+        case 5:
+            if(ch == '=') return 14;
+            else return 0;break;
+        case 6:
+            if(ch == '=') return 15;
+            else return 0;break;
+        case 7:
+            if(NUMBER.find(ch) != NUMBER.npos) return 7;
+            else if(ch == 'e') return 19;
+            else return 0;break;
+        case 8:
+            if(NUMBER.find(ch) != NUMBER.npos) return 7;
+            else cout << "error case 8" << endl;break;
+        case 9:
+            if(LETTER.find(ch) != LETTER.npos) return 10;
+            else cout << "error case 9" << endl;break;
+        case 10:
+            if(ch == '\'') return 16;
+            else cout << "error case 10" << endl;break;
+        case 11:
+            if(LETTER.find(ch) != LETTER.npos) return 12;
+            else cout << "error case 11" << endl;break;
+        case 12:
+            if(LETTER.find(ch) != LETTER.npos) return 12;
+            else if(ch == '"') return 17;
+            else cout << "error case 12" << endl;break;
+        case 13:
+            return 0;break;
+        case 14:
+            return 0;break;
+        case 15:
+            return 0;break;
+        case 16:
+            return 0;break;
+        case 17:
+            return 0;break;
+        case 18:
+            return 0;break;
+        case 19:
+            if(ch == '+'||ch == '-') return 20;
+            else cout << "error case 19" << endl;break;
+        case 20:
+            if(NUMBER.find(ch) != NUMBER.npos) return 21;
+            else cout << "error case 20" << endl;break;
+        case 21:
+            if(NUMBER.find(ch) != NUMBER.npos) return 21;
+            else return 0;break;
+        default:cout << "error default" << endl;
+    }
+}
+
+int scan::inIT(string str)
+{
+    int flag = 0,i;
+    for(i=0;i<IT.size();i++)
+        if(str == IT[i]){flag = 1;break;}
+    if(flag == 1)
+        return i;
+    else
+    {
+        IT.push_back(str);
+        return i;
+    }
+}
+
+int scan::inCT(string str)
+{
+    int flag = 0,i;
+    for(i=0;i<CT.size();i++)
+        if(str == CT[i]){flag = 1;break;}
+    if(flag == 1)
+        return i;
+    else
+    {
+        CT.push_back(str);
+        return i;
+    }
+}
+
+int scan::inST(string str)
+{
+    int flag = 0,i;
+    for(i=0;i<ST.size();i++)
+        if(str == ST[i]){flag = 1;break;}
+    if(flag == 1)
+        return i;
+    else
+    {
+        ST.push_back(str);
+        return i;
+    }
+}
+
+int scan::inCCT(string str)
+{
+    int flag = 0,i;
+    for(i=0;i<CCT.size();i++)
+        if(str == CCT[i]){flag = 1;break;}
+    if(flag == 1)
+        return i;
+    else
+    {
+        CCT.push_back(str);
+        return i;
+    }
+}
+
+int scan::inKT(string str)
+{
+    int flag = 0,i;
+    for(i=0;i<KT.size();i++)
+        if(str == KT[i]){flag = 1;break;}
+    if(flag == 1)
+        {tL.add("KT",i);tA.add("KT",i);}
+    else
+    {
+        tL.add("IT",inIT(str));tA.add("IT",inIT(str));
+    }
+}
+
+int scan::inPT(string str)
+{
+    int flag = 0,i;
+    for(i=0;i<PT.size();i++)
+        if(str == PT[i]){flag = 1;break;}
+    if(flag == 1)
+        return i;
+    else
+    {
+        PT.push_back(str);
+        return i;
+    }
+}
+
+void scan::state_token(int state_before,string token)//通过上一次状态判断是什么token
+{
+    int num;
+    switch(state_before)
+    {
+        case 2:inKT(token);break;
+        case 3:tL.add("CCT",inCCT(token));tA.add("CCT",inCCT(token));break;
+        case 4:tL.add("PT",inPT(token));tA.add("PT",inPT(token));break;
+        case 5:tL.add("PT",inPT(token));tA.add("PT",inPT(token));break;
+        case 6:tL.add("PT",inPT(token));tA.add("PT",inPT(token));break;
+        case 7:tL.add("CCT",inCCT(token));tA.add("CCT",inCCT(token));break;
+        case 13:tL.add("PT",inPT(token));tA.add("PT",inPT(token));break;
+        case 14:tL.add("PT",inPT(token));tA.add("PT",inPT(token));break;
+        case 15:tL.add("PT",inPT(token));tA.add("PT",inPT(token));break;
+        case 16:tL.add("CT",inCT(token));tA.add("CT",inCT(token));break;
+        case 17:tL.add("ST",inST(token));tA.add("ST",inST(token));break;
+        case 18:tL.add("PT",inPT(token));tA.add("PT",inPT(token));break;
+        case 21:tL.add("CCT",inCCT(token));tA.add("CCT",inCCT(token));break;
+        default:cout << "error!" << endl;
+    }
+}
+
+
+
+
+
