@@ -1,1 +1,405 @@
+#include <iostream>
+#include <string>
+#include <vector>
+using namespace std;
+//有文法相关及符号表相关两部分
+//以下为LL1分析栈，文法产生式,及文法的定义,及LL1逆序压栈函数   （已检测bug可应用）
+typedef struct strnode
+{
+    string str;
+    strnode *next;
+}strnode;
+
+typedef struct
+{
+    strnode *top;
+    strnode *head;
+}strstack;
+
+void initstrstack (strstack &st)
+{
+    strnode *p = new strnode;
+    st.head = p;
+    st.head->next = NULL;
+    st.top = st.head;
+    delete p;
+}
+
+void pushstr (strstack &st,string s)
+{
+    strnode *p = new strnode;
+    p->next = NULL;
+    p->str = s;
+    st.top->next = p;
+    st.top = p;
+    delete p;
+}
+
+bool popstr(strstack &st)
+{
+    strnode *p = st.head;
+    if(p->next == NULL) return false;
+    else
+        for(;p->next != st.top;p = p->next);
+    p->next = NULL;
+    st.top = p;
+    return true;
+}
+
+class sentence
+{
+
+public:
+    string vn;
+    vector <string> pro;
+    int num;
+    sentence (){}
+    sentence (string vn,string *pro,int num);
+    ~sentence(){}
+    void push_pro(strstack &st);
+};
+
+sentence::sentence (string vn,string *pro,int num)
+{
+    this->pro.resize(num);
+    this->vn = vn;
+    this->num = num;
+    for (int i = 0;i < num;i++)
+    {
+        this->pro[i] = pro[i];
+    }
+}
+
+
+
+void sentence::push_pro(strstack &st)
+{
+    for (int i = num - 1;i >= 0;i--)
+    {
+        pushstr(st,pro[i]);
+    }
+}
+
+class grammer
+{
+public:
+    vector <sentence> sen;
+    grammer(){}
+    ~grammer(){}
+    grammer(sentence *sen,int num);
+    int num;
+};
+
+grammer::grammer(sentence *sen,int num)
+{
+    this->sen.resize(num);
+    this->num = num;
+    for (int i = 0;i < num;i++)
+        this->sen[i] = sen[i];
+}
+
+int main()
+{
+    strstack st;
+    initstrstack(st);
+    string s0[3]= {"E","+","T"};
+    sentence sen("E",s0,3);
+    sen.push_pro(st);
+    cout<<st.top->str;
+    popstr(st);
+    cout<<st.top->str;
+}
+
+
+
+
+//以下为符号表内容的函数部分相关的数据结构定义及函数（暂未检测正确性,之后会检测bug）
+
+
+#include <iostream>
+#include <string>
+#include <vector>
+using namespace std;
+vector <valltable> vall_all;//活动记录总表
+vall_all.resize(0);
+FPMtable fpmt;//函数形参表
+TYPEL tpt;//类型表
+PFINFL pft;//函数表
+symbol_table symt;//符号表
+vector <search_node> searcht;   //索引表
+valltable *current_vallt;   //指向当前函数的活动记录指针
+search_symt.resize(0);
+int level_cnt = -1;  //计算大括号深度
+bool isinfun = false;//表示当前是否在函数内部   当isinfun = false,则表示全局变量
+
+bool istype(string &s)
+{
+    return (s == "int" || s == "char" || s == "bool");//待补充
+}
+
+int typebyte(string &s)
+{
+    if(s == "int")return 4;
+    else if(s == "char")return 1;
+    else if(s == "bool")return 1;//待补充
+}
+
+
+class vallnode
+{
+public:
+    string name;//如果无意义"#"
+    int add;//如果无意义-1
+    vallnode(){name = "#";add = -1;}
+    ~vallnode(){}
+    vallnode
+};
+
+class valltable
+{
+public:
+    vector <vallnode> table;
+    int level;
+    valltable(int level);
+    void pushtable(plotnode *p);
+    void fill_all_table();        //将函数形参表及符号总表及活动记录填完
+    valltable(){}
+    ~valltable(){}
+};
+valltable::valltable(int level)
+{
+    this->level = level;
+    table.resize(3);
+    table[0] = {"#",0}; //oldsp
+    table[1] = {"#",0}; //全局display
+    table[2] = {"#",0}; //将形参个数初始为0
+}
+
+
+
+void valltable::fill_all_table(plotnode *p,symbol_node *symn)    //填充活动记录、函数表、形参表、符号总表
+{
+    string var_cat;    //vn vf
+    string type;    //类型（int char 等）
+    int last_size;   //存储每次填充形参之前的vall表大小
+    int cnt = 0;    //形参个数计数
+    int level = level_cnt + 1;  //当前函数深度(其实c++都为0)
+    isinfun = true;
+    PFnode *f = new PFnode;
+    f->level = this->level = level;  //函数表及活动记录层次
+    f->off = 3;    //函数表区距
+    f->entry = 0;  //暂且设置函数入口地址为0
+    FPMnode *fpm = fpmt.top;  //      存储每次填充形参之前的符号表top指针
+    int byte;       //记录每个标识符的存储单元数
+    int vall_add;   //记录每个形参的off
+    for(;p != NULL ;p = p->next)
+    {
+        if(p->name == "KT")
+        {
+            type = KT[p->num];  //存储当前类型
+            var_cat = "vf";    //赋值形参
+            if(p->next->name == "PT" && p->next->num == 31) {p = p->next;var_cat = "vn";}   //如果是引用界符则更为换名形参
+            if(p->next->name == "PT" && p->next->num == 14) {p = p->next;}      //如果是指针界符，则不变
+            byte = (var_cat == "vn" ? 2 : typebyte(KT[p->num - 1]));//如果是换名形参则为2
+            vallnode a;
+            a.name = IT[p->next->num - 1];      //IT的方法待修改
+            a.add = -1;
+            last_size = table.size();
+            table.resize(last_size + byte,a);    //填充活动记录
+            int vall_add = last_size;   //指向新存入单元
+            fill_fpmt(a.name,type,var_cat,vall_add); //填写形参表
+            cnt++;
+        }
+        else if(p->name = "PT" && p->num == 18)break;//如果遇到左括号证明函数形参已填完
+    }
+    table[2] = {"#",cnt}; //参数个数
+    f->fpm = fpm->next;   //使形参表指针指向新存的符号表内容
+    f->num = cnt;      //修改形参个数
+    f->next = NULL;
+    symn->pf = f;   //修改函数标识符符号表的add值
+    pft.top->next = f;
+    pft.top = f;        //至此已经添加完新的函数表
+    fill_symt_copy_fpm(fpm->next);  //至此已添加完符号表
+    table.resize(table.size() + 1,0); //display表
+    delete f;
+
+
+}
+
+void valltable::pushtable(plotnode *p)  //p指向token序列的一个局部变量（好像没啥用 待删）
+{
+    vallnode node;
+    int byte;
+    byte = typebyte(KT[p->prior->num - 1]);
+    node.name = IT[p->num - 1];
+    node.add = -1;
+    table.resize(table.size() + byte,node);
+}
+
+
+
+typedef struct
+{
+    int level,off;      //层次和区距
+    int num;        //形参个数
+    int entry;   //入口地址初步按0算
+    FPMnode *fpm; //形参表
+    PFnode *next;
+}PFnode;    //函数表结点
+
+typedef struct
+{
+    PFnode *head;
+    PFnode *top;
+}PFINFL;    //函数表
+
+void initPFINFL()
+{
+    pft.head->next = NULL;
+    pft.top = pf.head;
+}
+
+
+typedef struct FPMnode
+{
+    string name;    //形参名字
+    TVAL_node *tva; //指向类型表
+    string var_cat;//形参类型  vf.fn
+    int *vall_add;  //指向活动记录中的address
+    FPMnode *next;  //next指针
+}FPMnode;   //formal parameter table 形参表结点
+
+typedef struct
+{
+    FPMnode *head;
+    FPMnode *top;
+}FPMtable;      //形参表
+
+void initFPMtable()
+{
+    fpmt.head->next = NULL;
+    fpmt.top = fpmt.head;
+}
+
+void fill_fpmt(string name,string type,string var_cat,int vall_add)
+{
+    FPMnode *p = new FPMnode;
+    p->name = name;
+    p->var_cat = var_cat;
+    p->vall_add = vall_add;
+    switch(name[0])
+    {
+        case 'i':p->tva = tpt.head->next;break;
+        case 'd':p->tva = tpt.head->next->next;break;
+        case 'c':p->tva = tpt.head->next->next->next;break;
+        case 'b':p->tva = tpt.head->next->next->next->next;break;
+        default :break;//待补充
+    }
+    p->next = NULL;
+    fpmt.top->next = p;
+    fpmt.top = p;
+    delete p;
+}
+
+void fill_symt_copy_fpm(FPMnode *fpm)      //根据形参表指针复制符号表信息,指针指向当前需要复制的形参
+{
+    FPMnode *f = fpm;
+    for(;f != NULL;f = f->next)
+    {
+        symbol_node *s = new symbol_node;
+        s->name = f->name;
+        s->typ = f->tva;
+        s->cat = f->var_cat;
+        s->var_add = f->vall_add;
+        s->pf = NULL;
+        s->ltp = NULL;
+        s->next = NULL;
+        symt.top->next = s;
+        symt.top = s;
+        delete s;
+    }
+}
+
+void change_level_cnt(plotnode *p)
+{
+    if(p->name = "PT" && p->num == 18)  //"{"
+        level_cnt = level_cnt + 1;
+    else if(p->name = "PT" && p->num == 19) //"}"
+    {
+        level_cnt = level_cnt - 1;
+        if(level_cnt = -1 && isinfun)   //若在函数内部,深度变为-1,则表示已不在函数内部
+            {
+                isinfun = false;
+                delete current_vallt;
+            }
+    }
+}
+
+
+
+class search_node  //符号表函数索引表结点
+{
+public:
+    string name;
+    symbol_node *symn;
+    valltable *vallt;
+    search_node(){}
+    ~search_node(){}
+    void copy_node(string name,symbol_node *symn,valltable *vallt)
+    {
+        this->name = name;
+        this->symn = symn;
+        this->vallt = vallt;
+    }
+};
+
+void fill_searcht(string name,symbol_node *symn,valltable *vallt)
+{
+    searcht.resize(search_symt.size() + 1);
+    searcht[search_symt.size() - 1].copy_node(name,symn,vallt);
+}
+
+
+int get_vall_add_and_fill(symbol_node *symn)
+{
+    int vall_add = current_vallt.size();
+    int byte = getbyte(symbol_node);
+    current_vallt->table.resize(current_vallt.size() + byte,symn->name);
+    return vall_add;
+}
+
+int getbyte(symbol_node *symn)
+{
+    if(symn->typ->tp == "i")return 4;
+    else if(symn->typ->tp == "d")return 8;
+    else if(symn->typ->tp == "c")return 1;
+    else if(symn->typ->tp == "b")return 1;
+    else if(symn->typ->tp == "arr")return &(symn->ltp);
+}
+
+
+void create_valltable (string fun_name)
+{
+    valltable a;
+    if(vall_all.size() == 0)
+    {
+        for(int i = 0;i < searcht.size();i++)
+            if(searcht[i].name == "main")
+            {
+                a = &(searcht[i].vallt);
+                vall_all.resize(vall_all.size() + 1,a);
+                break;
+            }
+
+    }
+    for(int i = 0;j < searcht.size();i++)
+    {
+        if(searcht[i].name == fun_name)
+        {
+            a = &(searcht[i].vallt);
+            vall_all.resize(vall_all.size() + 1,a);
+            break;
+        }
+    }
+}
 
