@@ -1,1 +1,157 @@
+部分代码
+#define _CRT_SECURE_NO_WARNINGS
+#include <iostream>
+#include <string>
+#include <vector>
+#include <sstream>
+#include <cstdlib>
+#include <cctype>
+#include<stdlib.h>
+#include <stdio.h>
+#include <cstring>
+using namespace std;
+int lenth_type[5]={0,0,0,0,0};   //长度表，不会用到太多暂时先设置为数组
+typedef struct AINFL_node     //数组表
+{
+     int low,high,lenth;
+     AINFL_node *next;
+     struct TVAL_node * tap;
+}AINFL_node;
+typedef struct            //数组表结点
+{
+    AINFL_node *head;
+    AINFL_node *top;
+}AINFL;
+typedef struct TVAL_node
+{
+     string tp;     //填表就等于你接受到的关键字
+     AINFL_node *aip;   //指向数组表
+     TVAL_node *next;
+}TVAL_node;
+typedef struct TVAL           //类型表定义
+{
+    TVAL_node *top;
+    TVAL_node *head;
+}TVAL;
+typedef struct symbol_node
+{
+    string name;
+    TVAL_node *tvp;         //指向类型表或者
+    string cat;          //指向类型编号      //数组指向长度表，函数指向函数表
+  //  PFnode *pf;              //指向函数表
+    symbol_node *next;
+    int *ltp;             //指向长度表
+   // vallnode *vd;
+}symbol_node;
+typedef struct
+{
+    symbol_node *top;     //队头指针
+    symbol_node *rear;    //队尾指针
+}symbol_table;
+void ini_Symbol_table(symbol_table *&l)             //初始化符号表
+{
+    l=new symbol_table;
+    l->rear=l->top=NULL;
+}
+void ini_AINFL(AINFL *&a)   //数组表初始化
+{
+    a=new AINFL;
+    a->head=a->top=NULL;
+}
+void ini_TVAL(TVAL *&t)      //类型表初始化
+{
+    t=new TVAL;
+    t->head=t->top=NULL;
+}
+void Origin_TVAL(TVAL *&t)    //类型表初始填入四项类型
+{
+    string a[4]={"int","double","char","bool"};
+    TVAL_node *q;
+    q=new TVAL_node;
+    for(int i=0;i<4;i++)
+    {
+    q->tp=a[i];
+    q->next=NULL;
+    if(t->head==NULL){t->head=t->top=q;}    //若队列为空，则新节点是队首节点，rear指向他
+    else
+    {
+    t->head->next=q;                  //将新结点链接到队尾。rear指向他
+    t->head=q;
+    //cout<<t->head->tp<<endl;
+    }q=new TVAL_node;}
+}
+typedef struct LNode
+{
+    string type;    //
+    string name;    //内容
+    struct LNode *next;
+    struct LNode *top;
+}LNode;
+void iniLNode(LNode *&fb)
+{
+    fb=new LNode;fb->next=NULL;
+}
+void push(LNode *&fb)
+{
+    string a[3]={"k","c","p"};
+    string b[3]={"int","a",";"};
+    LNode *p;
+    p=new LNode;
+    p->next=NULL;
+    for(int i=0;i<5;i++)
+    {
+        p->name=b[i];
+        p->type=a[i];
+        p->next=fb->next;
+        fb->next=p;
+        fb->top=p;
+        p=new LNode;
+    }
+}
+void fill_Nomal(symbol_table *l,TVAL *t,LNode *fb)
+{
+    symbol_node *q;
+    //TVAL_node   *k;
+    TVAL_node   *m;
+    m=new TVAL_node;
+    q=new symbol_node;
+   // k=new TVAL_node;
+    LNode *ll;
+    ll=new LNode;
+    ll=fb->top;
+    m=t->top;
+    cout<<fb->top->name;
+    for(;;ll=ll->next)
+    { if(ll->next==NULL)break;
+
+        if(ll->type=="p")
+        {
+            if(ll->name=="int")
+            {
+                  ll=ll->next;
+                  if(ll->type=="c")
+                     {q->name=ll->name;
+                      q->cat="v";
+    for(;;m=m->next)                                       //标明数组表中指向类型表的是哪一项
+    {if(m->tp==ll->name) q->tvp=m;
+                      cout<<q->name<<" "<<q->cat<<" "<<q->tvp->tp;break;}
+                      }
+            }
+        }
+    }
+
+}
+int main()
+{
+    symbol_table *l;
+    LNode *fb;
+    TVAL *t;
+    ini_TVAL(t);
+    iniLNode(fb);
+    ini_Symbol_table(l);
+    Origin_TVAL(t);
+    fill_Nomal(l,t,fb);
+}
+
+
 
